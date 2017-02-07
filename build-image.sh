@@ -1,39 +1,49 @@
 #!/bin/bash
 
+source lib.sh
+set -e
+
+
 image=$1
 tag='latest'
 
 
-if [ $1 = 0 ]
+if [[ -z $image ]]
 then
 	echo "Please use image name as the first argument!"
 	exit 1
 fi
 
-# founction for delete images
+# function for delete images
 function docker_rmi()
 {
-	echo -e "\n\nsudo docker rmi krejcmat/$1:$tag"
-	sudo docker rmi krejcmat/$1:$tag
+	echo -e "\n\n$DOCKER rmi krejcmat/$1:$tag"
+	$DOCKER rmi krejcmat/$1:$tag || true
 }
 
 
-# founction for build images
+# function for build images
 function docker_build()
 {
-	cd $1
-	echo -e "\n\nsudo docker build -t krejcmat/$1:$tag ."
-	/usr/bin/time -f "real  %e" sudo docker build -t krejcmat/$1:$tag .
-	cd ..
+	pushd $1
+	echo -e "\n\n$DOCKER build -t krejcmat/$1:$tag ."
+	$TIME $DOCKER build -t krejcmat/$1:$tag .
+	popd
+}
+
+function cleanup()
+{
+	rm -f images.txt
 }
 
 echo -e "\ndocker rm -f slave1 slave2 master"
-sudo docker rm -f slave1 slave2 master
+$DOCKER rm -f slave1 slave2 master || true
 
-sudo docker images >images.txt
+$DOCKER images >images.txt
+trap cleanup EXIT
 
 #all image is based on dnsmasq. master and slaves are based on base image.
-if [ $image == "hadoop-dnsmasq" ]
+if [[ $image == "hadoop-dnsmasq" ]]
 then
 	docker_rmi hadoop-master
 	docker_rmi hadoop-slave
@@ -43,7 +53,7 @@ then
 	docker_build hadoop-base
 	docker_build hadoop-master
 	docker_build hadoop-slave 
-elif [ $image == "hadoop-base" ]
+elif [[ $image == "hadoop-base" ]]
 then
 	docker_rmi hadoop-master
 	docker_rmi hadoop-slave
@@ -51,11 +61,11 @@ then
 	docker_build hadoop-base
 	docker_build hadoop-master
 	docker_build hadoop-slave
-elif [ $image == "hadoop-master" ]
+elif [[ $image == "hadoop-master" ]]
 then
 	docker_rmi hadoop-master
 	docker_build hadoop-master
-elif [ $image == "hadoop-slave" ]
+elif [[ $image == "hadoop-slave" ]]
 then
 	docker_rmi hadoop-slave
 	docker_build hadoop-slave
@@ -67,7 +77,6 @@ fi
 
 echo -e "\nimages before build"
 cat images.txt
-rm images.txt
 
 echo -e "\nimages after build"
-sudo docker images
+$DOCKER images
