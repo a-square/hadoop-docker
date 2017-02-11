@@ -15,7 +15,7 @@ then
 fi
 
 # delete old master container and start new master container
-$DOCKER rm -f master &> /dev/null
+$DOCKER rm -f master &> /dev/null || true
 echo "start master container..."
 $DOCKER run -d -t --dns 127.0.0.1 -P --name master -h master.krejcmat.com -w /root krejcmat/hadoop-master:$tag&> /dev/null
 
@@ -25,7 +25,7 @@ FIRST_IP=$(docker inspect --format="{{.NetworkSettings.IPAddress}}" master)
 # delete old slave containers and start new slave containers
 for i in $(seq 1 $N)
 do
-	$DOCKER rm -f slave$i &> /dev/null
+	$DOCKER rm -f slave$i &> /dev/null || true
 	echo "start slave$i container..."
 	$DOCKER run -d -t --dns 127.0.0.1 -P --name slave$i -h slave$i.krejcmat.com -e JOIN_IP=$FIRST_IP krejcmat/hadoop-slave:$tag &> /dev/null
 done 
