@@ -2,10 +2,11 @@ FROM sebge2/hadoop-dnsmasq:latest
 MAINTAINER sgerard <sgerard@emasphere.com>
 
 # install openssh-server
-RUN apt-get update && \
-apt-get install -y curl openssh-server nano  && \
-apt-get clean -y && apt-get autoclean -y && apt-get autoremove -y && \
-rm -rf /var/lib/{apt,dpkg,cache,log}/
+RUN \
+	apt-get update -yqq && \
+	apt-get install -yqq openssh-server nano-tiny vim-tiny && \
+	apt-get clean -yqq && apt-get autoclean -yqq && apt-get autoremove -yqq && \
+	rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 # Java Version
 ENV JAVA_VERSION_MAJOR 8
@@ -15,8 +16,10 @@ ENV JAVA_PACKAGE       jdk
 
 # Download and unarchive Java
 RUN mkdir -p /opt &&\
-    curl -jksSLH "Cookie: oraclelicense=accept-securebackup-cookie"\
-    http://download.oracle.com/otn-pub/java/jdk/${JAVA_VERSION_MAJOR}u${JAVA_VERSION_MINOR}-b${JAVA_VERSION_BUILD}/${JAVA_PACKAGE}-${JAVA_VERSION_MAJOR}u${JAVA_VERSION_MINOR}-linux-x64.tar.gz | gunzip -c - | tar -xf - -C /opt &&\
+    wget -q -o out.log -O - --header="Cookie: oraclelicense=accept-securebackup-cookie" \
+        http://download.oracle.com/otn-pub/java/jdk/${JAVA_VERSION_MAJOR}u${JAVA_VERSION_MINOR}-b${JAVA_VERSION_BUILD}/${JAVA_PACKAGE}-${JAVA_VERSION_MAJOR}u${JAVA_VERSION_MINOR}-linux-x64.tar.gz \
+        | gunzip -c - | tar -xf - -C /opt && \
+    rm out.log && \
     ln -s /opt/jdk1.${JAVA_VERSION_MAJOR}.0_${JAVA_VERSION_MINOR} /opt/jdk &&\
     rm -rf /opt/jdk/*src.zip \
          /opt/jdk/lib/missioncontrol \
@@ -52,17 +55,19 @@ ENV JAVA_HOME /opt/jdk
 ENV PATH $PATH:$JAVA_HOME/bin
 
 #configure ssh free key access
-RUN mkdir /var/run/sshd && \
-ssh-keygen -t rsa -f ~/.ssh/id_rsa -P '' && \
-cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys && \
-mv /usr/local/ssh_config ~/.ssh/config && \
-sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+RUN \
+	mkdir /var/run/sshd && \
+	ssh-keygen -t rsa -f ~/.ssh/id_rsa -P '' && \
+	cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys && \
+	mv /usr/local/ssh_config ~/.ssh/config && \
+	sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 
 #install hadoop 2.7.3
-RUN wget -q -o out.log -P /tmp http://www.trieuvan.com/apache/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz && \
-tar xzf /tmp/hadoop-2.7.3.tar.gz -C /usr/local && \
-rm /tmp/hadoop-2.7.3.tar.gz && \
-mv /usr/local/hadoop-2.7.3 /usr/local/hadoop && \
-mv /usr/local/bashrc ~/.bashrc && \
-mv /usr/local/hadoop-env.sh /usr/local/hadoop/etc/hadoop/hadoop-env.sh
-
+RUN \
+	wget -q -o out.log -P /tmp http://www.trieuvan.com/apache/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz && \
+    rm out.log && \
+	tar xzf /tmp/hadoop-2.7.3.tar.gz -C /usr/local && \
+	rm /tmp/hadoop-2.7.3.tar.gz && \
+	mv /usr/local/hadoop-2.7.3 /usr/local/hadoop && \
+	mv /usr/local/bashrc ~/.bashrc && \
+	mv /usr/local/hadoop-env.sh /usr/local/hadoop/etc/hadoop/hadoop-env.sh
